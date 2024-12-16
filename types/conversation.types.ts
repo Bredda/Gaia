@@ -8,9 +8,3 @@ export interface ConversationMessage {
   content: string;
   attachments?: MessageAttachment[];
 }
-
-export interface CreateConversationPayload {
-  space_id: string;
-  name: string;
-  conversation: ConversationMessage[];
-}

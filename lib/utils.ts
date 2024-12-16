@@ -1,3 +1,4 @@
+import { ConversationMessage } from "@/types/conversation.types";
 import { clsx, type ClassValue } from "clsx";
 import { useContext, type Context } from "react";
 import { twMerge } from "tailwind-merge";
@@ -15,4 +16,10 @@ export function useSafeContext<T>(Context: Context<T | undefined>) {
   const context = useContext(Context);
   if (context === undefined) throw new Error(`Context Provider not found`);
   return context as T;
+}
+
+export function conversationToString(conversation: ConversationMessage[]) {
+  return conversation
+    .map((message) => `${message.role} - ${message.content}`)
+    .join("\n");
 }

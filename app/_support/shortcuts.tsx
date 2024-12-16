@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import React from "react";
-import { ShortcutsMap } from "../config/shortcuts";
+import { ShortcutsMap } from "../../config/shortcuts";
 import { Command } from "lucide-react";
 
 interface ShortcutsProps {

@@ -4,6 +4,7 @@ import {
   Globe,
   LayoutDashboard,
   BotMessageSquare,
+  NotebookPen,
 } from "lucide-react";
 
 export const dashboardFeature: AppFeature = {
@@ -15,9 +16,9 @@ export const dashboardFeature: AppFeature = {
 export const spaceFeatures: AppFeature[] = [
   dashboardFeature,
   {
-    name: "Chat",
-    subpath: "chats",
-    icon: BotMessageSquare,
+    name: "Notes",
+    subpath: "notes",
+    icon: NotebookPen,
   },
   {
     name: "Podcastify",

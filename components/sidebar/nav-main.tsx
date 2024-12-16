@@ -7,7 +7,7 @@ import {
   SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import React, { useEffect } from "react";
-import { dashboardFeature, spaceFeatures } from "@/app/config/space-features";
+import { dashboardFeature, spaceFeatures } from "@/config/space-features";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSpace } from "@/hooks/use-space";

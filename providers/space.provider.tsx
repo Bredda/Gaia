@@ -4,24 +4,24 @@ import { createContext, use, useEffect, useState } from "react";
 
 import { CreateSpacePayload, Space } from "@/types/space";
 import { fetchSpaces, insertSpace } from "@/actions/space.actions";
-import {
-  ConversationMessage,
-  CreateConversationPayload,
-} from "@/types/conversation.types";
+
 import { usePathname } from "next/navigation";
-import { insertConversation } from "@/actions/chat.actions";
 import { PostgrestError } from "@supabase/supabase-js";
+import { CreateNotePayload, Note } from "@/types/notes";
+import { fetchNotes, insertNote } from "@/actions/notes.actions";
+import { set } from "date-fns";
 
 interface SpaceState {
   loading: boolean;
   spaces: Space[];
+  notes: Note[];
   addSpace: (payload: CreateSpacePayload) => void;
   removeSpace: (spaceId: string) => void;
   editSpace: (space: Partial<Space> & { id: string }) => void;
   activeSpace: Space;
   selectSpace: (space: Space) => void;
-  saveConversation: (payload: CreateConversationPayload) => Promise<{
-    conversation: any;
+  saveNote: (payload: CreateNotePayload) => Promise<{
+    note: Note;
     error: PostgrestError | null;
   }>;
 }
@@ -40,6 +40,7 @@ export function SpaceProvider({ children }: any) {
   const [creating, setCreating] = useState(false);
   const [activeSpace, setActiveSpace] = useState<Space>(LoadginSpace);
   const [spaces, setSpaces] = useState<Space[]>([LoadginSpace]);
+  const [notes, setNotes] = useState<Note[]>([]);
 
   const loadAll = async () => {
     try {
@@ -62,8 +63,7 @@ export function SpaceProvider({ children }: any) {
         (space) => space.slug === spaceSlug
       );
       if (!targetSpace) throw new Error("Default personnal space not found");
-      setActiveSpace(targetSpace);
-      setLoading(false);
+      selectSpace(targetSpace).then((notes) => setLoading(false));
     });
   }, []);
 
@@ -77,10 +77,18 @@ export function SpaceProvider({ children }: any) {
 
   const selectSpace = async (targetSpace: Space) => {
     setActiveSpace(targetSpace);
+    try {
+      if (targetSpace.id === "loading") return;
+      const data = await fetchNotes(targetSpace.id);
+      setNotes(data);
+      return data;
+    } catch (error) {
+      throw new Error("Error fetching notes");
+    }
   };
 
-  const saveConversation = async (payload: CreateConversationPayload) => {
-    return await insertConversation(payload);
+  const saveNote = async (payload: CreateNotePayload) => {
+    return await insertNote(payload);
   };
 
   const removeSpace = async (spaceId: string) => {};
@@ -96,7 +104,8 @@ export function SpaceProvider({ children }: any) {
     activeSpace,
     selectSpace,
     spaces,
-    saveConversation,
+    saveNote,
+    notes,
   };
 
   return (

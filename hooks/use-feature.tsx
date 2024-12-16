@@ -1,6 +1,6 @@
 "use client";
 
-import { spaceFeatures } from "@/app/config/space-features";
+import { spaceFeatures } from "@/config/space-features";
 import { AppFeature } from "@/types/feature.type";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";

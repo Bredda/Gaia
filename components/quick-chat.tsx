@@ -13,16 +13,8 @@ import {
 } from "./ui/sheet";
 import { useShortcut } from "@/hooks/use-shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { cn } from "@/lib/utils";
+import { cn, conversationToString } from "@/lib/utils";
 import UserAvatar from "./ui/extensions/user-avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
 import { useSpace } from "@/hooks/use-space";
 import SimpleQuery from "./chat/simple-query";
 import { generateConversationName } from "@/ai/name-conversation";
@@ -34,6 +26,7 @@ import {
   Loader,
   Pencil,
   Save,
+  SaveAll,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
@@ -43,7 +36,7 @@ export const maxDuration = 30;
 
 const QuickChat = () => {
   const simpleQueryRef = useRef<any>();
-  const { activeSpace, spaces, saveConversation } = useSpace();
+  const { activeSpace, spaces, saveNote } = useSpace();
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -53,22 +46,41 @@ const QuickChat = () => {
     shortcut: "c",
     onShortcut: () => setOpen(!open),
   });
-  const onSave = async () => {
+  const onSaveAll = async () => {
     setSaving(true);
     const { name } = await generateConversationName(conversation);
-    const { conversation: savedConversation, error } = await saveConversation({
-      conversation,
+    const { note, error } = await saveNote({
+      content: conversationToString(conversation),
       name,
       space_id: activeSpace.id,
+      type: "quick_chat",
     });
     if (error) {
       console.error(error);
-      toast.error("Error saving conversation");
+      toast.error("Error saving note");
     } else {
-      toast.success("Conversation saved successfully");
+      toast.success("Note saved successfully");
     }
     setSaving(false);
   };
+  const onSaveResponse = async (message: ConversationMessage) => {
+    setSaving(true);
+    const { name } = await generateConversationName([message]);
+    const { note, error } = await saveNote({
+      content: message.content,
+      name,
+      space_id: activeSpace.id,
+      type: "quick_chat",
+    });
+    if (error) {
+      console.error(error);
+      toast.error("Error saving note");
+    } else {
+      toast.success("Note saved successfully");
+    }
+    setSaving(false);
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -99,8 +111,11 @@ const QuickChat = () => {
         <SheetHeader>
           <SheetTitle>Quick chat</SheetTitle>
           <SheetDescription>
-            Start a quick instant chat. It is ephemeral but can be saved to your
-            spaces if needed.
+            Start a quick instant chat. The conversation is temporary, but you
+            can save the entire chat, a specific response, or just a small part
+            of a response as notes in your current space.
+            <br />
+            Use context menu to save or copy responses.
           </SheetDescription>
         </SheetHeader>
 
@@ -121,44 +136,21 @@ const QuickChat = () => {
             </TooltipContent>
           </Tooltip>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="secondary"
-                    disabled={generating || conversation.length === 0 || saving}
-                    onClick={onSave}
-                  >
-                    {saving ? <Loader className="animate-spin" /> : <Save />}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Save conversation</p>
-                </TooltipContent>
-              </Tooltip>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="left">
-              <DropdownMenuLabel>Choose space</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="group">
-                {activeSpace.name}
-                <span className="text-sm text-muted-foreground group-hover:text-muted">
-                  (Current)
-                </span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              {spaces.map(
-                (space) =>
-                  space.id !== activeSpace.id && (
-                    <DropdownMenuItem key={space.id}>
-                      {space.name}
-                    </DropdownMenuItem>
-                  )
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="secondary"
+                disabled={generating || conversation.length === 0 || saving}
+                onClick={onSaveAll}
+              >
+                {saving ? <Loader className="animate-spin" /> : <SaveAll />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Save the whole conversation</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         <div className="p-4 flex-1 flex flex-col space-y-2 overflow-y-auto rounded-t-lg">
@@ -207,21 +199,41 @@ const QuickChat = () => {
                 </div>
                 <div className="flex space-x-1 invisible group-hover:visible">
                   {message.role === "assistant" && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          type="button"
-                          onClick={copyToClipboard.bind(null, message.content)}
-                        >
-                          <Copy />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Copy to clipboard</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            type="button"
+                            onClick={() => onSaveResponse(message)}
+                          >
+                            <Save />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Save response as note</p>
+                        </TooltipContent>
+                      </Tooltip>{" "}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            type="button"
+                            onClick={copyToClipboard.bind(
+                              null,
+                              message.content
+                            )}
+                          >
+                            <Copy />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Copy to clipboard</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
                   )}
                   {message.role === "user" &&
                     index === conversation.length - 2 && (
