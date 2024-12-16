@@ -30,12 +30,15 @@ export interface SimpleQueryHandle {
 interface SimpleQueryProps {
   conversation: ConversationMessage[];
   onConversationChange: (conversation: ConversationMessage[]) => void;
-
+  disabled?: boolean;
   onGeneratingChange?: (generating: boolean) => void;
 }
 
 const SimpleQuery = forwardRef<SimpleQueryHandle, SimpleQueryProps>(
-  ({ conversation, onConversationChange, onGeneratingChange }, ref) => {
+  (
+    { conversation, onConversationChange, onGeneratingChange, disabled },
+    ref
+  ) => {
     const [generating, setGenerating] = useState(false);
     const inputFileRef = useRef<HTMLInputElement>(null);
     const [files, setFiles] = useState<File[]>([]);
@@ -123,6 +126,7 @@ const SimpleQuery = forwardRef<SimpleQueryHandle, SimpleQueryProps>(
               size="icon"
               variant="secondary"
               type="button"
+              disabled={disabled}
               onClick={() => inputFileRef.current?.click()}
             >
               <Paperclip />
@@ -150,7 +154,7 @@ const SimpleQuery = forwardRef<SimpleQueryHandle, SimpleQueryProps>(
               )}
             />
 
-            <Button size="icon" type="submit" disabled={generating}>
+            <Button size="icon" type="submit" disabled={generating || disabled}>
               {generating ? (
                 <Loader className="animate-spin" />
               ) : (

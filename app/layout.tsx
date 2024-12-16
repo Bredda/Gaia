@@ -72,7 +72,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <Toaster />
+            <Toaster richColors />
             {data?.user ? (
               <AppLayout>{children}</AppLayout>
             ) : (

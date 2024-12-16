@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -27,8 +27,17 @@ import { useSpace } from "@/hooks/use-space";
 import SimpleQuery from "./chat/simple-query";
 import { generateConversationName } from "@/ai/name-conversation";
 import { ConversationMessage } from "@/types/conversation.types";
-import { BotMessageSquare, Copy, Eraser, Pencil, Save } from "lucide-react";
+import {
+  BotMessageSquare,
+  Copy,
+  Eraser,
+  Loader,
+  Pencil,
+  Save,
+} from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "./ui/badge";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 
 export const maxDuration = 30;
 
@@ -37,6 +46,7 @@ const QuickChat = () => {
   const { activeSpace, spaces, saveConversation } = useSpace();
   const [open, setOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [conversation, setConversation] = useState<ConversationMessage[]>([]);
 
   useShortcut({
@@ -44,7 +54,7 @@ const QuickChat = () => {
     onShortcut: () => setOpen(!open),
   });
   const onSave = async () => {
-    console.debug("Saving conversation", conversation);
+    setSaving(true);
     const { name } = await generateConversationName(conversation);
     const { conversation: savedConversation, error } = await saveConversation({
       conversation,
@@ -56,6 +66,16 @@ const QuickChat = () => {
       toast.error("Error saving conversation");
     } else {
       toast.success("Conversation saved successfully");
+    }
+    setSaving(false);
+  };
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch (e) {
+      console.error(e);
+      toast.error("Error copying to clipboard");
     }
   };
   const onClear = () => {
@@ -90,7 +110,7 @@ const QuickChat = () => {
               <Button
                 size="icon"
                 variant="secondary"
-                disabled={generating}
+                disabled={generating || saving}
                 onClick={onClear}
               >
                 <Eraser />
@@ -108,10 +128,10 @@ const QuickChat = () => {
                   <Button
                     size="icon"
                     variant="secondary"
-                    disabled={generating || conversation.length === 0}
+                    disabled={generating || conversation.length === 0 || saving}
                     onClick={onSave}
                   >
-                    <Save />
+                    {saving ? <Loader className="animate-spin" /> : <Save />}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -143,63 +163,88 @@ const QuickChat = () => {
 
         <div className="p-4 flex-1 flex flex-col space-y-2 overflow-y-auto rounded-t-lg">
           {conversation.map((message, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex items-center space-x-2 justify-start group",
-                message.role === "user" ? " flex-row" : "flex-row-reverse"
-              )}
-            >
-              {message.role === "user" ? (
-                <UserAvatar className="self-end" />
-              ) : (
-                <BotMessageSquare className="self-end ml-2" />
-              )}
-
+            <React.Fragment key={index}>
               <div
                 className={cn(
-                  "bg-secondary text-secondary-foreground p-2 w-3/5",
-                  message.role === "user"
-                    ? "rounded-t-lg rounded-br-lg "
-                    : "rounded-t-lg rounded-bl-lg "
+                  "flex items-center space-x-2 justify-start group",
+                  message.role === "user" ? " flex-row" : "flex-row-reverse"
                 )}
               >
-                {message.content}
-              </div>
-
-              <div className="flex space-x-1 invisible group-hover:visible">
-                {message.role === "assistant" && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button size="icon" variant="outline" type="button">
-                        <Copy />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Copy to clipboard</p>
-                    </TooltipContent>
-                  </Tooltip>
+                {message.role === "user" ? (
+                  <UserAvatar className="self-end" />
+                ) : (
+                  <BotMessageSquare className="self-end ml-2" />
                 )}
-                {message.role === "user" &&
-                  index === conversation.length - 2 && (
+
+                <div
+                  className={cn(
+                    "bg-secondary text-secondary-foreground p-2 w-3/5",
+                    message.role === "user"
+                      ? "rounded-t-lg rounded-br-lg "
+                      : "rounded-t-lg rounded-bl-lg "
+                  )}
+                >
+                  <div>{message.content}</div>
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className="flex space-y-1 space-x-2 items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Attachments:
+                      </span>
+                      {message.attachments.map((attachment, index) => (
+                        <HoverCard key={index}>
+                          <HoverCardTrigger>
+                            <Badge variant="outline">
+                              {attachment.filename}
+                            </Badge>
+                          </HoverCardTrigger>
+                          <HoverCardContent>
+                            {attachment.content}
+                          </HoverCardContent>
+                        </HoverCard>
+                      ))}{" "}
+                    </div>
+                  )}
+                </div>
+                <div className="flex space-x-1 invisible group-hover:visible">
+                  {message.role === "assistant" && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="icon" variant="outline" type="button">
-                          <Pencil />
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          type="button"
+                          onClick={copyToClipboard.bind(null, message.content)}
+                        >
+                          <Copy />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Edit message</p>
+                        <p>Copy to clipboard</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
+                  {message.role === "user" &&
+                    index === conversation.length - 2 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="icon" variant="outline" type="button">
+                            <Pencil />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit message</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                </div>
               </div>
-            </div>
+            </React.Fragment>
           ))}
         </div>
         <SheetFooter className="w-full flex sm:justify-center sm:items-center space-x-2">
           <SimpleQuery
             ref={simpleQueryRef}
+            disabled={saving}
             conversation={conversation}
             onConversationChange={setConversation}
             onGeneratingChange={setGenerating}
