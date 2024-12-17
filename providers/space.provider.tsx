@@ -88,7 +88,11 @@ export function SpaceProvider({ children }: any) {
   };
 
   const saveNote = async (payload: CreateNotePayload) => {
-    return await insertNote(payload);
+    const resp = await insertNote(payload);
+    if (resp.note) {
+      setNotes((prev) => [...prev, resp.note]);
+    }
+    return resp;
   };
 
   const removeSpace = async (spaceId: string) => {};
